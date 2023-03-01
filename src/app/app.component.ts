@@ -1,19 +1,25 @@
-import { Component } from '@angular/core';
+import { Component, ViewChild } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
+import { MatSort, Sort } from '@angular/material/sort';
+import { getCSWRecords, Iso19115Record } from '../lib/csw';
+import { FileDialogComponent } from './file-dialog/file-dialog.component';
 
-import {} from '../lib/csw';
-
-const ELEMENT_DATA = [
-  { position: 1, name: 'Hydrogen', weight: 1.0079, symbol: 'H' },
-  { position: 2, name: 'Helium', weight: 4.0026, symbol: 'He' },
-  { position: 3, name: 'Lithium', weight: 6.941, symbol: 'Li' },
-  { position: 4, name: 'Beryllium', weight: 9.0122, symbol: 'Be' },
-  { position: 5, name: 'Boron', weight: 10.811, symbol: 'B' },
-  { position: 6, name: 'Carbon', weight: 12.0107, symbol: 'C' },
-  { position: 7, name: 'Nitrogen', weight: 14.0067, symbol: 'N' },
-  { position: 8, name: 'Oxygen', weight: 15.9994, symbol: 'O' },
-  { position: 9, name: 'Fluorine', weight: 18.9984, symbol: 'F' },
-  { position: 10, name: 'Neon', weight: 20.1797, symbol: 'Ne' },
-];
+class Iso19115RecordDiv extends Iso19115Record {
+  constructor(
+    public override title: string,
+    public override mdId: string,
+    public override abstract: string,
+    public override keywords: string[],
+    public override resourceOwner: string,
+    public override resourceOwnerUrl: string,
+    public csvMatched: boolean = false
+  ) {
+    super(title, mdId, abstract, keywords, resourceOwner, resourceOwnerUrl);
+  }
+}
+interface Dictionary<T> {
+  [Key: string]: T;
+}
 
 @Component({
   selector: 'app-root',
@@ -22,6 +28,50 @@ const ELEMENT_DATA = [
 })
 export class AppComponent {
   title = 'novex-dataset-app';
-  displayedColumns: string[] = ['position', 'name', 'weight', 'symbol'];
-  dataSource = ELEMENT_DATA;
+  displayedColumns: string[] = ['mdId', 'title', 'resourceOwner', 'keywords'];
+  dataSource: Iso19115RecordDiv[] = [];
+  csvData: Dictionary<string>[] = [];
+  cswLoading: boolean = true;
+  mdIdColumnCsv: string = '';
+
+  constructor(public dialog: MatDialog) {}
+
+  openDialog(): void {
+    const dialogRef = this.dialog.open(FileDialogComponent, {
+      data: {},
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      this.csvData = result.csvData;
+      this.mdIdColumnCsv = result.mdIdColumn;
+
+      this.csvData.map((x) => {
+        let cswRecord = this.dataSource.find(
+          (y) => y.mdId === x[this.mdIdColumnCsv]
+        );
+        if (cswRecord) {
+          cswRecord.csvMatched = true;
+        }
+      });
+      this.dataSource
+        .filter((x) => !x.csvMatched)
+        .map((x) => (x.csvMatched = false));
+      this.displayedColumns.push('csvMatched');
+
+      this.dataSource = this.dataSource.filter((x) => x.csvMatched);
+    });
+  }
+  ngOnInit() {
+    getCSWRecords(
+      'https://www.nationaalgeoregister.nl/geonetwork/srv/dut/csw',
+      'type=%27dataset%27%20AND%20keyword=%27basisset%20novex%27',
+      10
+    ).then((records: Iso19115Record[] | undefined) => {
+      if (records === undefined) {
+        return;
+      }
+      this.dataSource = records.map((x) => x as Iso19115RecordDiv);
+      this.cswLoading = false;
+    });
+  }
 }

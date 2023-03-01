@@ -1,0 +1,43 @@
+<h1 mat-dialog-title>Open CSV file</h1>
+<div mat-dialog-content>
+  <div>
+    <button
+      title="Open CSV file (headers required)"
+      *ngIf="!fileLoaded"
+      type="button"
+      color="primary"
+      mat-raised-button
+      (click)="fileInput.click()"
+    >
+      Choose File
+    </button>
+    <input
+      hidden
+      (change)="onFileSelected()"
+      #fileInput
+      type="file"
+      id="file"
+      accept=".csv"
+    />
+    <mat-form-field appearance="fill" *ngIf="fileLoaded">
+      <mat-label>Select column with metadata identifier</mat-label>
+      <mat-select [(value)]="selectedColumn">
+        <mat-option *ngFor="let column of columns" [value]="column">
+          {{ column }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+</div>
+<div mat-dialog-actions>
+  <button [mat-dialog-close]="null" mat-button>CANCEL</button>
+  <button
+    color="primary"
+    [disabled]="!fileLoaded"
+    mat-button
+    [mat-dialog-close]="data"
+    cdkFocusInitial
+  >
+    OK
+  </button>
+</div>

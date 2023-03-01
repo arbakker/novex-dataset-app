@@ -3,16 +3,19 @@ var getRequests = async (
   cqlQuery: string,
   maxRecords = 0
 ) => {
-  let url = `${cswEndpoint}?request=GetRecords&Service=CSW&Version=2.0.2&typeNames=gmd:MD_Metadata&resultType=hits&constraint=${cqlQuery}&constraintLanguage=CQL_TEXT&constraint_language_version=1.1.0`;
+  let url = `${cswEndpoint}?request=GetRecords&Service=CSW&Version=2.0.2&typeNames=gmd:MD_Metadata&resultType=results&constraint=${cqlQuery}&constraintLanguage=CQL_TEXT&constraint_language_version=1.1.0&outputSchema=http://www.isotc211.org/2005/gmd&elementSetName=full`;
+
   let res = await fetch(url);
   if (!res.ok) return;
   let data = await res.text();
   let parser = new DOMParser();
   let xmlDoc = parser.parseFromString(data, 'text/xml');
   let recordsNodes = xmlDoc.querySelectorAll('SearchResults');
-  let totalNumberRecords = parseInt(
-    recordsNodes[0].getAttribute('numberOfRecordsMatched')
+  let nrMatched: string | null = recordsNodes[0].getAttribute(
+    'numberOfRecordsMatched'
   );
+
+  let nrMatchedInt = parseInt(nrMatched !== null ? nrMatched : '-1');
   let pageSize = 50;
   if (maxRecords < 50 && maxRecords > 0) {
     pageSize = maxRecords;
@@ -21,33 +24,62 @@ var getRequests = async (
   let promises = [];
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    let url = `${cswEndpoint}?request=GetRecords&Service=CSW&Version=2.0.2&typeNames=gmd:MD_Metadata&resultType=results&constraint=${cqlQuery}&constraintLanguage=CQL_TEXT&constraint_language_version=1.1.0&startPosition=${startPosition}&maxRecords=${pageSize}`;
+    let url = `${cswEndpoint}?request=GetRecords&Service=CSW&Version=2.0.2&typeNames=gmd:MD_Metadata&resultType=results&constraint=${cqlQuery}&constraintLanguage=CQL_TEXT&constraint_language_version=1.1.0&startPosition=${startPosition}&maxRecords=${pageSize}&outputSchema=http://www.isotc211.org/2005/gmd&elementSetName=full`;
+
     let prom = fetch(url);
     promises.push(prom);
     startPosition += pageSize;
-    if (startPosition > totalNumberRecords) break;
+    if (startPosition > nrMatchedInt) break;
   }
   return promises;
 };
 
-class Record {
+export class Iso19115Record {
   constructor(
-    public title: number,
-    public id: number,
-    public abstract: number,
-    public keywords: string[]
+    public title: string,
+    public mdId: string,
+    public abstract: string,
+    public keywords: string[],
+    public resourceOwner: string,
+    public resourceOwnerUrl: string
   ) {}
 }
 
-var getCSWRecords = async (
+export class ServiceRecord extends Iso19115Record {
+  constructor(
+    public override title: string,
+    public override mdId: string,
+    public override abstract: string,
+    public override keywords: string[],
+    public override resourceOwner: string,
+    public override resourceOwnerUrl: string,
+    public url: string,
+    public protocol: string,
+    public datasetSourceMdId: string,
+    public serviceType: string[],
+    public serviceProvider: string
+  ) {
+    super(title, mdId, abstract, keywords, resourceOwner, resourceOwnerUrl);
+  }
+}
+
+export var getCSWRecords = async (
   cswEndpoint: string,
   cqlQuery: string,
   maxRecords = 0
-) => {
-  let records: Record[] = [];
-  let promises = getRequests(cswEndpoint, cqlQuery, maxRecords);
-  const responses = await promises;
-  const responseBodies = await Promise.all(responses).then((bodies) => {
+): Promise<Iso19115Record[] | undefined> => {
+  let records: Iso19115Record[] = [];
+  let promises: Promise<Promise<Response>[] | undefined> = getRequests(
+    cswEndpoint,
+    cqlQuery,
+    maxRecords
+  );
+  const responses: Promise<Response>[] | undefined = await promises;
+  if (responses === undefined) {
+    return;
+  }
+
+  const responseBodies = await Promise.all(responses!).then((bodies) => {
     return Promise.all(
       bodies.map((body) => {
         return body.text();
@@ -59,39 +91,136 @@ var getCSWRecords = async (
   responseBodies.forEach((body) => {
     let parser = new DOMParser();
     let xmlDoc = parser.parseFromString(body, 'text/xml');
-    let recordsNodes = xmlDoc.querySelectorAll('SummaryRecord');
+    let recordsNodes = xmlDoc.querySelectorAll('MD_Metadata');
     for (let i = 0; i < recordsNodes.length; ++i) {
-      let recordNode = recordsNodes[i];
-      let mdId = recordNode.querySelectorAll('identifier')[0].textContent;
-      let mdTitle = recordNode.querySelectorAll('title')[0].textContent;
-      let abstract = recordNode.querySelectorAll('abstract')[0].textContent;
-      // let modified = recordNode.querySelectorAll("modified")[0].textContent
-      let kws: string[] = [];
+      let recordDoc = recordsNodes[i];
+      let recordDocDoc = parser.parseFromString(
+        recordDoc.outerHTML,
+        'text/xml'
+      );
+      let title: string = getTitle(recordDocDoc);
+      let mdId: string = getMdId(recordDocDoc);
+      let abstract: string = getAbstract(recordDocDoc);
 
-      recordNode.querySelectorAll('subject').forEach(function (item) {
-        if (item.textContent !== null) {
-          kws.push(item.textContent);
-        }
-      });
-      let record: Record = new Record(mdTitle, mdId, abstract, kws);
+      let kws: string[] = getElementsByText(
+        ".//gmd:descriptiveKeywords[not(.//gmd:thesaurusName) or .//gmd:thesaurusName/gmd:CI_Citation[.//gmd:title/@gco:nilReason = 'missing'] ]/gmd:MD_Keywords/gmd:keyword/gco:CharacterString",
+        recordDocDoc
+      );
+      let organisationUrl = '';
+      let organisationName = getStringValXpath(
+        recordDocDoc,
+        '//gmd:identificationInfo/gmd:MD_DataIdentification/gmd:pointOfContact/gmd:CI_ResponsibleParty/gmd:organisationName/gco:CharacterString'
+      );
+      if (organisationName === '') {
+        organisationName = getStringValXpath(
+          recordDocDoc,
+          '//gmd:identificationInfo/gmd:MD_DataIdentification/gmd:pointOfContact/gmd:CI_ResponsibleParty/gmd:organisationName/gmx:Anchor'
+        );
+        organisationUrl = getStringValXpath(
+          recordDocDoc,
+          '//gmd:identificationInfo/gmd:MD_DataIdentification/gmd:pointOfContact/gmd:CI_ResponsibleParty/gmd:organisationName/gmx:Anchor/@xlink:href'
+        );
+      }
+
+      let record: Iso19115Record = new Iso19115Record(
+        title,
+        mdId,
+        abstract,
+        kws,
+        organisationName,
+        organisationUrl
+      );
       records.push(record);
     }
   });
   return records;
 };
 
+function getStringValXpath(xmlDoc: Document, xpath: string): string {
+  let xpathResult = xmlDoc.evaluate(
+    xpath,
+    xmlDoc,
+    xpathResolver,
+    XPathResult.STRING_TYPE,
+    null
+  );
+  return xpathResult.stringValue;
+}
+
+function getElementsByText(xpath: string, xmlDoc: Document): string[] {
+  var results: string[] = [];
+  var xpathResult = xmlDoc.evaluate(
+    xpath,
+    xmlDoc,
+    xpathResolver,
+    XPathResult.ORDERED_NODE_ITERATOR_TYPE,
+    null
+  );
+  var node;
+  while ((node = xpathResult.iterateNext()) != null) {
+    if (node.textContent !== null) {
+      results.push(node.textContent);
+    }
+  }
+  return results;
+}
+
+interface NSMap {
+  [name: string]: string;
+}
+
+const xpathResolver: XPathNSResolver = {
+  lookupNamespaceURI: (prefix) => {
+    const NS: NSMap = {
+      csw: 'http://www.opengis.net/cat/csw/2.0.2',
+      dc: 'http://purl.org/dc/elements/1.1/',
+      dct: 'http://purl.org/dc/terms/',
+      gmd: 'http://www.isotc211.org/2005/gmd',
+      gco: 'http://www.isotc211.org/2005/gco',
+      geonet: 'http://www.fao.org/geonetwork',
+      gmx: 'http://www.isotc211.org/2005/gmx',
+      gts: 'http://www.isotc211.org/2005/gts',
+      srv: 'http://www.isotc211.org/2005/srv',
+      xlink: 'http://www.w3.org/1999/xlink',
+    };
+    if (prefix === null || !Object.keys(NS).includes(prefix)) return null;
+    let val = NS[prefix];
+    return val;
+  },
+};
+
+function getMdId(xmlDoc: Document): string {
+  const xpath: string = '//gmd:fileIdentifier/gco:CharacterString';
+  return getStringValXpath(xmlDoc, xpath);
+}
+
+function getTitle(xmlDoc: Document): string {
+  // const recordType = 'dataset';
+  const resourceIdentification = 'gmd:MD_DataIdentification';
+  const xpath: string = `//gmd:identificationInfo/${resourceIdentification}/gmd:citation/gmd:CI_Citation/gmd:title/gco:CharacterString/text()`;
+  return getStringValXpath(xmlDoc, xpath);
+}
+
+function getAbstract(xmlDoc: Document): string {
+  // const recordType = 'dataset';
+  const resourceIdentification = 'gmd:MD_DataIdentification';
+  const xpath: string = `//gmd:identificationInfo/${resourceIdentification}/gmd:abstract/gco:CharacterString/text()`;
+  return getStringValXpath(xmlDoc, xpath);
+}
+
 function getServiceUrl(xmlDoc: Document) {
   let onlineResNode = xmlDoc.querySelectorAll(
     'connectPoint CI_OnlineResource linkage URL'
   );
-  let url = '';
+  let urlString: string = '';
   if (onlineResNode && onlineResNode.length > 0) {
-    url: string = onlineResNode[0].textContent;
+    let url: string | null = onlineResNode[0].textContent;
+    urlString = url !== null ? url : '';
   }
-  if (url.endsWith('/WMTSCapabilities.xml')) {
-    url = url.replace('/WMTSCapabilities.xml', '');
+  if (urlString.endsWith('/WMTSCapabilities.xml')) {
+    urlString = urlString.replace('/WMTSCapabilities.xml', '');
   }
-  return url;
+  return urlString;
 }
 
 function getServiceProtocol(xmlDoc: Document) {
@@ -109,20 +238,36 @@ function getServiceProtocol(xmlDoc: Document) {
   return '';
 }
 
-function getOperatesOnSourceId(xmlDoc: Document) {
-  let operatesOnNode = xmlDoc.querySelectorAll(
-    'SV_ServiceIdentification operatesOn'
-  );
-  if (operatesOnNode && operatesOnNode.length > 0) {
-    let resourceUrl = operatesOnNode[0].getAttribute('xlink:href');
-    if (resourceUrl.includes('#')) {
-      resourceUrl = resourceUrl.split('#')[0];
+function getInspireConformance(xmlDoc: Document) {
+  const inspConformanceString =
+    'VERORDENING (EU) Nr. 1089/2010 VAN DE COMMISSIE van 23 november 2010 ter uitvoering van Richtlijn 2007/2/EG van het Europees Parlement en de Raad betreffende de interoperabiliteit van verzamelingen ruimtelijke gegevens en van diensten met betrekking tot ruimtelijke gegevens';
+
+  function getPass(xmlDoc: Document, xpath: string) {
+    let conformances = xmlDoc.evaluate(
+      xpath,
+      xmlDoc,
+      xpathResolver,
+      XPathResult.ANY_TYPE,
+      null
+    );
+    var resultNode: Node = conformances.iterateNext()!;
+    while (resultNode) {
+      let passNode = (resultNode.parentNode as HTMLElement).querySelector(
+        'pass Boolean'
+      );
+      if (passNode) {
+        return passNode.textContent;
+      }
     }
-    const urlSearchParams = new URLSearchParams(resourceUrl.toLowerCase());
-    let dsSourceId = Object.fromEntries(urlSearchParams.entries())['id'];
-    return dsSourceId;
+    return null;
   }
-  return '';
+  let xpathString = `//gmd:DQ_ConformanceResult[contains(gmd:specification/gmd:CI_Citation/gmd:title/gco:CharacterString,'${inspConformanceString}')]`;
+  let xpathAnchor = `//gmd:DQ_ConformanceResult[contains(gmd:specification/gmd:CI_Citation/gmd:title/gmx:Anchor,'${inspConformanceString}')]`;
+  let result = getPass(xmlDoc, xpathString);
+  if (!result) {
+    result = getPass(xmlDoc, xpathAnchor);
+  }
+  return result;
 }
 
 function getServiceProvider(xmlDoc: Document) {
@@ -183,124 +328,3 @@ function getMdContact(xmlDoc: Document) {
   }
   return '';
 }
-
-interface NSMap {
-  [name: string]: string;
-}
-
-function getInspireConformance(xmlDoc: Document) {
-  const inspConformanceString =
-    'VERORDENING (EU) Nr. 1089/2010 VAN DE COMMISSIE van 23 november 2010 ter uitvoering van Richtlijn 2007/2/EG van het Europees Parlement en de Raad betreffende de interoperabiliteit van verzamelingen ruimtelijke gegevens en van diensten met betrekking tot ruimtelijke gegevens';
-  const NS: NSMap = {
-    csw: 'http://www.opengis.net/cat/csw/2.0.2',
-    dc: 'http://purl.org/dc/elements/1.1/',
-    dct: 'http://purl.org/dc/terms/',
-    gmd: 'http://www.isotc211.org/2005/gmd',
-    gco: 'http://www.isotc211.org/2005/gco',
-    geonet: 'http://www.fao.org/geonetwork',
-    gmx: 'http://www.isotc211.org/2005/gmx',
-    gts: 'http://www.isotc211.org/2005/gts',
-    srv: 'http://www.isotc211.org/2005/srv',
-    xlink: 'http://www.w3.org/1999/xlink',
-  };
-
-  function nsResolver(prefix: string) {
-    if (!Object.keys(NS).includes(prefix))
-      throw `namespace prefix ${prefix} not declared in nsResolver`;
-    return NS[prefix];
-  }
-
-  function getPass(xmlDoc: Document, xpath: string, nsResolver) {
-    let conformances = xmlDoc.evaluate(
-      xpath,
-      xmlDoc,
-      nsResolver,
-      XPathResult.ANY_TYPE,
-      null
-    );
-    var resultNode = conformances.iterateNext();
-    while (resultNode) {
-      let passNode = resultNode.querySelector('pass Boolean');
-      if (passNode) {
-        return passNode.textContent;
-      }
-    }
-    return null;
-  }
-  let xpathString = `//gmd:DQ_ConformanceResult[contains(gmd:specification/gmd:CI_Citation/gmd:title/gco:CharacterString,'${inspConformanceString}')]`;
-  let xpathAnchor = `//gmd:DQ_ConformanceResult[contains(gmd:specification/gmd:CI_Citation/gmd:title/gmx:Anchor,'${inspConformanceString}')]`;
-  let result = getPass(xmlDoc, xpathString, nsResolver);
-  if (!result) {
-    result = getPass(xmlDoc, xpathAnchor, nsResolver);
-  }
-  return result;
-}
-
-var getCSWRecord = async (cswEndpoint: string, mdIdentifier: string) => {
-  let url = `${cswEndpoint}?service=CSW&request=GetRecordById&version=2.0.2&outputSchema=http://www.isotc211.org/2005/gmd&elementSetName=full&id=${mdIdentifier}#MD_DataIdentification`;
-  let res = await fetch(url);
-  if (!res.ok) return '';
-  let data = await res.text();
-
-  let parser = new DOMParser();
-  let xmlDoc: Document = parser.parseFromString(data, 'text/xml');
-  let resourceType = getResourceType(xmlDoc);
-  if (!resourceType) {
-    console.log(
-      `WARNING: could not find metadata for record with id ${mdIdentifier} in catalog, url: ${url}`
-    );
-    return null;
-  }
-  if (resourceType === 'service') {
-    return getSvcCswRecord(xmlDoc);
-  } else if (resourceType === 'dataset') {
-    return getDsCswRecord(mdIdentifier, xmlDoc);
-  }
-};
-
-var getDsCswRecord = async (mdIdentifier: string, xmlDoc: Document) => {
-  return {
-    id: mdIdentifier,
-    datasetInspireConformance: getInspireConformance(xmlDoc),
-    datasetMdStandardVersion: getMdStandardVersion(xmlDoc),
-    datasetMdContactEmail: getMdContact(xmlDoc),
-  };
-};
-
-var getSvcCswRecord = async (xmlDoc: Document) => {
-  let serviceUrl = getServiceUrl(xmlDoc);
-  // try with https immediately, since http wont work
-  serviceUrl = serviceUrl.replace('http://', 'https://');
-  let protocol = getServiceProtocol(xmlDoc);
-  let operatesOnMdId = getOperatesOnSourceId(xmlDoc);
-  let serviceType = getServiceType(xmlDoc);
-  let serviceProvider = getServiceProvider(xmlDoc);
-  return {
-    url: serviceUrl,
-    protocol: protocol,
-    datasetSourceMdId: operatesOnMdId,
-    serviceType: serviceType,
-    serviceProvider: serviceProvider,
-  };
-};
-
-var getCSWRecordsWithUrl = async (
-  cswEndpoint: string,
-  cqlQuery: string,
-  maxRecords = 0
-) => {
-  let records = await getCSWRecords(cswEndpoint, cqlQuery, maxRecords);
-  for (let i = 0; i < records.length; ++i) {
-    let record = records[i];
-    let data = await getCSWRecord(cswEndpoint, record.id);
-    Object.assign(record, data);
-  }
-  return records;
-};
-
-export default {
-  getCSWRecord,
-  getCSWRecordsWithUrl,
-  getCSWRecords,
-  getRequests,
-};

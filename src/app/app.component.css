@@ -1,0 +1,19 @@
+.loading {
+  justify-content: center;
+  align-items: center;
+  display: flex;
+  height: 100vh;
+}
+
+.loaded {
+  overflow: scroll;
+  height: 100vh;
+}
+
+.inNGR {
+  background-color: #e6ffec;
+}
+
+.notInNGR {
+  background-color: #ffebe9;
+}

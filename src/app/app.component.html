@@ -1,34 +1,135 @@
-<h1>TEST</h1>
 <div>
-  <table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
-    <!--- Note that these columns can be defined in any order.
-          The actual rendered columns are set as a property on the row definition" -->
+  <div [ngClass]="cswLoading ? 'loading' : 'loaded'">
+    <div *ngIf="cswLoading">
+      <mat-spinner style="margin: auto"></mat-spinner>
+      <p style="text-align: center; margin-top: 1em">
+        NGR metadata records inladen
+      </p>
+    </div>
+    <table
+      *ngIf="!cswLoading"
+      mat-table
+      [dataSource]="dataSource"
+      class="mat-elevation-z8"
+    >
+      <ng-container matColumnDef="mdId">
+        <th mat-header-cell *matHeaderCellDef>metadata-identifier</th>
+        <td
+          mat-cell
+          *matCellDef="let element"
+          [ngClass]="
+            csvData.length > 0
+              ? element.csvMatched
+                ? 'inNGR'
+                : 'notInNGR'
+              : ''
+          "
+        >
+          <a
+            href="https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/{{
+              element.mdId
+            }}"
+            >{{ element.mdId }}</a
+          >
+        </td>
+      </ng-container>
 
-    <!-- Position Column -->
-    <ng-container matColumnDef="position">
-      <th mat-header-cell *matHeaderCellDef>No.</th>
-      <td mat-cell *matCellDef="let element">{{ element.position }}</td>
-    </ng-container>
+      <!-- Name Column -->
+      <ng-container matColumnDef="resourceOwner">
+        <th mat-header-cell *matHeaderCellDef>resourceOwner</th>
+        <td
+          mat-cell
+          *matCellDef="let element"
+          [ngClass]="
+            csvData.length > 0
+              ? element.csvMatched
+                ? 'inNGR'
+                : 'notInNGR'
+              : ''
+          "
+        >
+          <span
+            *ngIf="
+              element.resourceOwnerUrl === '';
+              then thenBlock;
+              else elseBlock
+            "
+          ></span>
+          <ng-template #thenBlock>{{ element.resourceOwner }}</ng-template>
+          <ng-template #elseBlock
+            ><a href="{{ element.resourceOwnerUrl }}">{{
+              element.resourceOwner
+            }}</a></ng-template
+          >
+        </td>
+      </ng-container>
 
-    <!-- Name Column -->
-    <ng-container matColumnDef="name">
-      <th mat-header-cell *matHeaderCellDef>Name</th>
-      <td mat-cell *matCellDef="let element">{{ element.name }}</td>
-    </ng-container>
+      <!-- Weight Column -->
+      <ng-container matColumnDef="keywords">
+        <th mat-header-cell *matHeaderCellDef>keywords</th>
+        <td
+          mat-cell
+          *matCellDef="let element"
+          [ngClass]="
+            csvData.length > 0
+              ? element.csvMatched
+                ? 'inNGR'
+                : 'notInNGR'
+              : ''
+          "
+        >
+          {{ element.keywords }}
+        </td>
+      </ng-container>
 
-    <!-- Weight Column -->
-    <ng-container matColumnDef="weight">
-      <th mat-header-cell *matHeaderCellDef>Weight</th>
-      <td mat-cell *matCellDef="let element">{{ element.weight }}</td>
-    </ng-container>
+      <!-- Symbol Column -->
+      <ng-container matColumnDef="title">
+        <th mat-header-cell *matHeaderCellDef>title</th>
+        <td
+          mat-cell
+          *matCellDef="let element"
+          [ngClass]="
+            csvData.length > 0
+              ? element.csvMatched
+                ? 'inNGR'
+                : 'notInNGR'
+              : ''
+          "
+        >
+          {{ element.title }}
+        </td>
+      </ng-container>
 
-    <!-- Symbol Column -->
-    <ng-container matColumnDef="symbol">
-      <th mat-header-cell *matHeaderCellDef>Symbol</th>
-      <td mat-cell *matCellDef="let element">{{ element.symbol }}</td>
-    </ng-container>
+      <ng-container matColumnDef="csvMatched">
+        <th mat-header-cell *matHeaderCellDef>csvMatched</th>
+        <td
+          mat-cell
+          *matCellDef="let element"
+          [ngClass]="
+            csvData.length > 0
+              ? element.csvMatched
+                ? 'inNGR'
+                : 'notInNGR'
+              : ''
+          "
+        >
+          {{ element.csvMatched }}
+        </td>
+      </ng-container>
 
-    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-    <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
-  </table>
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+    </table>
+  </div>
+
+  <button
+    mat-fab
+    color="primary"
+    (click)="openDialog()"
+    aria-label="Upload CSV file to compare with NGR results"
+    title="Upload CSV file to compare with NGR results"
+    style="display: initial; position: absolute; right: 1em; bottom: 1em"
+  >
+    <mat-icon>upload_file</mat-icon>
+  </button>
 </div>
