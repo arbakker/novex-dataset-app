@@ -1,8 +1,7 @@
-import { compileNgModule } from '@angular/compiler';
 import { Component, ViewChild } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
-import { MatSort, Sort } from '@angular/material/sort';
-import { filter } from 'rxjs';
+import { isDevMode } from '@angular/core';
+
 import {
   csvMatched,
   Dictionary,
@@ -77,7 +76,15 @@ export class AppComponent {
       this.dataView = this.dataSource.filter((x) => {
         for (let myFilter of this.filters) {
           const myproperty = myFilter.filterColumn as keyof Iso19115RecordDiv;
-          return myFilter.filterValues.includes(x[myproperty] as string);
+          const myValue = x[myproperty];
+          if (Array.isArray(myValue)) {
+            const intersection = myFilter.filterValues.filter((element) =>
+              (x[myproperty] as string[]).includes(element)
+            );
+            return intersection.length > 0;
+          } else {
+            return myFilter.filterValues.includes(x[myproperty] as string);
+          }
         }
         if (this.filters.length === 0) {
           return true;
@@ -203,29 +210,41 @@ export class AppComponent {
     return 0;
   }
   ngOnInit() {
-    getCSWRecords(this.cswEndpoint, encodeURIComponent(this.cqlQuery)).then(
-      (records: Iso19115Record[] | undefined) => {
-        if (records === undefined) {
-          return;
-        }
-        this.dataSource = records
-          .map((x) => x as Iso19115RecordDiv)
-          .sort(this.sortRecords);
-        this.dataView = this.dataSource;
-        this.cswLoading = false;
-
-        let url = `${
-          this.cswEndpoint
-        }?request=GetRecords&Service=CSW&Version=2.0.2&typeNames=gmd:MD_Metadata&resultType=results&constraint=${encodeURIComponent(
-          this.cqlQuery
-        )}&constraintLanguage=CQL_TEXT&constraint_language_version=1.1.0&outputSchema=http://www.isotc211.org/2005/gmd&elementSetName=full`;
-
-        this._snackBar.openFromComponent(HtmlSnackbarComponent, {
-          data: {
-            html: `<p>Retrieved ${this.dataSource.length} metadata records from NGR with <a  href="${url}">query</a>:</p><pre><code>${this.cqlQuery}</code></pre>`,
-          },
-        });
+    let promise: Promise<Iso19115Record[] | undefined>;
+    if (isDevMode()) {
+      promise = getCSWRecords(
+        this.cswEndpoint,
+        encodeURIComponent(this.cqlQuery),
+        -1,
+        './assets/mock.xml'
+      );
+    } else {
+      promise = getCSWRecords(
+        this.cswEndpoint,
+        encodeURIComponent(this.cqlQuery)
+      );
+    }
+    promise.then((records: Iso19115Record[] | undefined) => {
+      if (records === undefined) {
+        return;
       }
-    );
+      this.dataSource = records
+        .map((x) => x as Iso19115RecordDiv)
+        .sort(this.sortRecords);
+      this.dataView = this.dataSource;
+      this.cswLoading = false;
+
+      let url = `${
+        this.cswEndpoint
+      }?request=GetRecords&Service=CSW&Version=2.0.2&typeNames=gmd:MD_Metadata&resultType=results&constraint=${encodeURIComponent(
+        this.cqlQuery
+      )}&constraintLanguage=CQL_TEXT&constraint_language_version=1.1.0&outputSchema=http://www.isotc211.org/2005/gmd&elementSetName=full`;
+
+      this._snackBar.openFromComponent(HtmlSnackbarComponent, {
+        data: {
+          html: `<p>Retrieved ${this.dataSource.length} metadata records from NGR with <a  href="${url}">query</a>:</p><pre><code>${this.cqlQuery}</code></pre>`,
+        },
+      });
+    });
   }
 }

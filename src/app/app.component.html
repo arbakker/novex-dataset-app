@@ -87,7 +87,24 @@
       </ng-container>
 
       <ng-container matColumnDef="keywords">
-        <th mat-header-cell *matHeaderCellDef>keywords</th>
+        <th mat-header-cell *matHeaderCellDef>
+          <span
+            >keywords
+            <mat-icon
+              title="Filter Column"
+              aria-label="Filter Column"
+              style="
+                vertical-align: middle;
+                float: right;
+                cursor: pointer;
+                margin-right: 1em;
+              "
+              [ngClass]="filterActive('keywords') ? 'filterActive' : ''"
+              (click)="openFilterDialog('keywords', filters)"
+              >filter_list</mat-icon
+            ></span
+          >
+        </th>
         <td
           mat-cell
           *matCellDef="let element"

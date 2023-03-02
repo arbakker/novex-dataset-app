@@ -15,7 +15,6 @@ import {
 export class FilterDialogComponent implements OnInit {
   dataSource: Iso19115RecordDiv[] = [];
   column: string = '';
-
   filterValues: (string | string[] | csvMatched | undefined)[] = [];
   selectedValues: string[] = [];
 
@@ -31,7 +30,9 @@ export class FilterDialogComponent implements OnInit {
     }
     const myproperty = this.column as keyof Iso19115RecordDiv;
     // let myType = typeof this.dataSource[0][myproperty];
+
     let values = this.dataSource.map((x) => x[myproperty]);
+    values = values.flat();
     this.filterValues = values.filter((x, i, a) => a.indexOf(x) === i).sort();
   }
 
