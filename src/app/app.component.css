@@ -1,4 +1,4 @@
-.loading {
+import .loading {
   justify-content: center;
   align-items: center;
   display: flex;
@@ -10,10 +10,20 @@
   height: 100vh;
 }
 
-.inNGR {
+.inCsv {
   background-color: #e6ffec;
 }
 
-.notInNGR {
+.notInCsv {
   background-color: #ffebe9;
+}
+
+.notInNGR {
+  background-color: #fffce9;
+}
+
+.filterActive {
+  background-color: #ff4081;
+  color: white;
+  border-radius: 4px;
 }

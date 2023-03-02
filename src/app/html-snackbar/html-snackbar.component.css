@@ -1,0 +1,12 @@
+a {
+  color: #0060df;
+}
+a:visited {
+  color: #ff4081;
+}
+
+a.dismiss {
+  color: #ff4081;
+  float: right;
+  cursor: pointer;
+}

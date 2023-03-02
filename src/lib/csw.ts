@@ -1,10 +1,16 @@
-var getRequests = async (
+import { max } from 'rxjs';
+import { Iso19115Record } from './models';
+
+var getCswPromises = async (
   cswEndpoint: string,
   cqlQuery: string,
-  maxRecords = 0
+  maxRecords = -1,
+  debugRecordsUrl = ''
 ) => {
-  let url = `${cswEndpoint}?request=GetRecords&Service=CSW&Version=2.0.2&typeNames=gmd:MD_Metadata&resultType=results&constraint=${cqlQuery}&constraintLanguage=CQL_TEXT&constraint_language_version=1.1.0&outputSchema=http://www.isotc211.org/2005/gmd&elementSetName=full`;
-
+  if (debugRecordsUrl !== '') {
+    return [fetch(debugRecordsUrl)];
+  }
+  let url = `${cswEndpoint}?request=GetRecords&Service=CSW&Version=2.0.2&typeNames=gmd:MD_Metadata&resultType=hits&constraint=${cqlQuery}&constraintLanguage=CQL_TEXT&constraint_language_version=1.1.0&outputSchema=http://www.isotc211.org/2005/gmd&elementSetName=full`;
   let res = await fetch(url);
   if (!res.ok) return;
   let data = await res.text();
@@ -14,65 +20,40 @@ var getRequests = async (
   let nrMatched: string | null = recordsNodes[0].getAttribute(
     'numberOfRecordsMatched'
   );
-
   let nrMatchedInt = parseInt(nrMatched !== null ? nrMatched : '-1');
-  let pageSize = 50;
-  if (maxRecords < 50 && maxRecords > 0) {
-    pageSize = maxRecords;
-  }
-  let startPosition = 1;
+  let pageSize = 20;
   let promises = [];
+  let startPosition = 1;
+
   // eslint-disable-next-line no-constant-condition
+  // TODO: await promises in this already async function
   while (true) {
     let url = `${cswEndpoint}?request=GetRecords&Service=CSW&Version=2.0.2&typeNames=gmd:MD_Metadata&resultType=results&constraint=${cqlQuery}&constraintLanguage=CQL_TEXT&constraint_language_version=1.1.0&startPosition=${startPosition}&maxRecords=${pageSize}&outputSchema=http://www.isotc211.org/2005/gmd&elementSetName=full`;
 
     let prom = fetch(url);
     promises.push(prom);
     startPosition += pageSize;
-    if (startPosition > nrMatchedInt) break;
+    if (
+      startPosition > nrMatchedInt ||
+      (maxRecords != -1 && startPosition >= maxRecords)
+    )
+      break;
   }
   return promises;
 };
 
-export class Iso19115Record {
-  constructor(
-    public title: string,
-    public mdId: string,
-    public abstract: string,
-    public keywords: string[],
-    public resourceOwner: string,
-    public resourceOwnerUrl: string
-  ) {}
-}
-
-export class ServiceRecord extends Iso19115Record {
-  constructor(
-    public override title: string,
-    public override mdId: string,
-    public override abstract: string,
-    public override keywords: string[],
-    public override resourceOwner: string,
-    public override resourceOwnerUrl: string,
-    public url: string,
-    public protocol: string,
-    public datasetSourceMdId: string,
-    public serviceType: string[],
-    public serviceProvider: string
-  ) {
-    super(title, mdId, abstract, keywords, resourceOwner, resourceOwnerUrl);
-  }
-}
-
 export var getCSWRecords = async (
   cswEndpoint: string,
   cqlQuery: string,
-  maxRecords = 0
+  maxRecords = -1,
+  debugRecordsUrl = ''
 ): Promise<Iso19115Record[] | undefined> => {
   let records: Iso19115Record[] = [];
-  let promises: Promise<Promise<Response>[] | undefined> = getRequests(
+  let promises: Promise<Promise<Response>[] | undefined> = getCswPromises(
     cswEndpoint,
     cqlQuery,
-    maxRecords
+    maxRecords,
+    debugRecordsUrl
   );
   const responses: Promise<Response>[] | undefined = await promises;
   if (responses === undefined) {

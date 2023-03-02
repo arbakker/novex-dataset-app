@@ -1,0 +1,29 @@
+<h1 mat-dialog-title>Filter {{ column }} column</h1>
+<div mat-dialog-content>
+  <div>
+    <mat-form-field appearance="fill">
+      <mat-label>Select column with metadata identifier</mat-label>
+      <mat-select [(value)]="selectedValues" multiple="true">
+        <mat-option
+          *ngFor="let filterValue of filterValues"
+          [value]="filterValue"
+        >
+          {{ filterValue }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+</div>
+<div mat-dialog-actions>
+  <button *ngIf="selectedValues.length > 0" mat-button [mat-dialog-close]="[]">
+    CLEAR FILTER
+  </button>
+  <button
+    color="primary"
+    [mat-dialog-close]="selectedValues"
+    mat-button
+    cdkFocusInitial
+  >
+    OK
+  </button>
+</div>

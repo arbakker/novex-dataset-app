@@ -12,8 +12,11 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { FilterDialogComponent } from './filter-dialog/filter-dialog.component';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { HtmlSnackbarComponent } from './html-snackbar/html-snackbar.component';
 @NgModule({
-  declarations: [AppComponent, FileDialogComponent],
+  declarations: [AppComponent, FileDialogComponent, FilterDialogComponent, HtmlSnackbarComponent],
   imports: [
     BrowserModule,
     BrowserAnimationsModule,
@@ -25,6 +28,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
     MatInputModule,
     MatSelectModule,
     MatProgressSpinnerModule,
+    MatSnackBarModule,
   ],
   providers: [],
   bootstrap: [AppComponent],
