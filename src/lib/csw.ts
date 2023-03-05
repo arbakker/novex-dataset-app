@@ -1,5 +1,12 @@
-import { max } from 'rxjs';
 import { Iso19115Record } from './models';
+
+export var getRecordsUrl = (
+  cswEndpoint: string,
+  cqlQuery: string,
+  resultType: string = 'results'
+): string => {
+  return `${cswEndpoint}?request=GetRecords&Service=CSW&Version=2.0.2&typeNames=gmd:MD_Metadata&constraint=${cqlQuery}&constraintLanguage=CQL_TEXT&constraint_language_version=1.1.0&outputSchema=http://www.isotc211.org/2005/gmd&elementSetName=full&resultType=${resultType}`;
+};
 
 var getCswPromises = async (
   cswEndpoint: string,
@@ -10,8 +17,8 @@ var getCswPromises = async (
   if (debugRecordsUrl !== '') {
     return [fetch(debugRecordsUrl)];
   }
-  let url = `${cswEndpoint}?request=GetRecords&Service=CSW&Version=2.0.2&typeNames=gmd:MD_Metadata&resultType=hits&constraint=${cqlQuery}&constraintLanguage=CQL_TEXT&constraint_language_version=1.1.0&outputSchema=http://www.isotc211.org/2005/gmd&elementSetName=full`;
-  let res = await fetch(url);
+  let urlHits = `${getRecordsUrl(cswEndpoint, cqlQuery, 'hits')}`;
+  let res = await fetch(urlHits);
   if (!res.ok) return;
   let data = await res.text();
   let parser = new DOMParser();
@@ -27,10 +34,11 @@ var getCswPromises = async (
 
   // eslint-disable-next-line no-constant-condition
   // TODO: await promises in this already async function
+  let urlResults = getRecordsUrl(cswEndpoint, cqlQuery);
   while (true) {
-    let url = `${cswEndpoint}?request=GetRecords&Service=CSW&Version=2.0.2&typeNames=gmd:MD_Metadata&resultType=results&constraint=${cqlQuery}&constraintLanguage=CQL_TEXT&constraint_language_version=1.1.0&startPosition=${startPosition}&maxRecords=${pageSize}&outputSchema=http://www.isotc211.org/2005/gmd&elementSetName=full`;
+    let pagedUrl = `${urlResults}&startPosition=${startPosition}&maxRecords=${pageSize}`;
 
-    let prom = fetch(url);
+    let prom = fetch(pagedUrl);
     promises.push(prom);
     startPosition += pageSize;
     if (

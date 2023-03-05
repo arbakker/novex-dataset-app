@@ -3,7 +3,7 @@
     <div *ngIf="cswLoading">
       <mat-spinner style="margin: auto"></mat-spinner>
       <p style="text-align: center; margin-top: 1em">
-        NGR metadata records inladen
+        NGR metadata records ophalen
       </p>
     </div>
     <table
@@ -28,6 +28,8 @@
               href="https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/{{
                 element.mdId
               }}"
+              target="_blank"
+              title="Bekijk dit record in het NGR"
               >{{ element.mdId }}</a
             >
           </ng-template>
@@ -51,8 +53,8 @@
           <span
             >resourceOwner
             <mat-icon
-              title="Filter Column"
-              aria-label="Filter Column"
+              title="Filter"
+              aria-label="Filter"
               style="
                 vertical-align: middle;
                 float: right;
@@ -79,7 +81,7 @@
           ></span>
           <ng-template #thenBlock> {{ element.resourceOwner }}</ng-template>
           <ng-template #elseBlock
-            ><a href="{{ element.resourceOwnerUrl }}">{{
+            ><a href="{{ element.resourceOwnerUrl }}" target="_blank">{{
               element.resourceOwner
             }}</a></ng-template
           >
@@ -91,8 +93,8 @@
           <span
             >keywords
             <mat-icon
-              title="Filter Column"
-              aria-label="Filter Column"
+              title="Filter"
+              aria-label="Filter"
               style="
                 vertical-align: middle;
                 float: right;
@@ -110,7 +112,15 @@
           *matCellDef="let element"
           [ngClass]="getMatchedClass(element)"
         >
-          {{ element.keywords }}
+          <a
+            *ngFor="let kw of element.keywords; last as isLast"
+            [href]="
+              '\#type=\'dataset\' AND keyword=\'' + kw.toLowerCase() + '\''
+            "
+            [title]="'filter op keyword: ' + kw"
+          >
+            {{ kw }}<span *ngIf="!isLast">, </span>
+          </a>
         </td>
       </ng-container>
       <ng-container matColumnDef="title">
@@ -129,8 +139,8 @@
           <span
             >csvMatched
             <mat-icon
-              title="Filter Column"
-              aria-label="Filter Column"
+              title="Filter"
+              aria-label="Filter"
               style="
                 vertical-align: middle;
                 float: right;
@@ -162,8 +172,8 @@
     *ngIf="csvData.length === 0"
     color="primary"
     (click)="openDialog()"
-    aria-label="Upload CSV file to compare with NGR results"
-    title="Upload CSV file to compare with NGR results"
+    aria-label="Upload een CSV bestand om te vergelijken met de records uit NGR"
+    title="Upload een CSV bestand om te vergelijken met de records uit NGR"
     style="display: initial; position: absolute; right: 1em; bottom: 1em"
   >
     <mat-icon>upload_file</mat-icon>
@@ -173,8 +183,8 @@
     (click)="downloadResultSet()"
     *ngIf="csvData.length > 0"
     color="secondary"
-    aria-label="Export current filterered results to CSV"
-    title="Export current filterered results to CSV"
+    aria-label="Exporteer huidige resultaatset naar een CSV bestand"
+    title="Exporteer huidige resultaatset naar een CSV bestand"
     style="display: initial; position: absolute; right: 1em; bottom: 1em"
   >
     <mat-icon>download</mat-icon>

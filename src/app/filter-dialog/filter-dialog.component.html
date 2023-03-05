@@ -2,7 +2,7 @@
 <div mat-dialog-content>
   <div>
     <mat-form-field appearance="fill">
-      <mat-label>Select column with metadata identifier</mat-label>
+      <mat-label>Selecteer kolom met metadata identifier</mat-label>
       <mat-select [(value)]="selectedValues" multiple="true">
         <mat-option
           *ngFor="let filterValue of filterValues"
@@ -16,7 +16,7 @@
 </div>
 <div mat-dialog-actions>
   <button *ngIf="selectedValues.length > 0" mat-button [mat-dialog-close]="[]">
-    CLEAR FILTER
+    RESET FILTER
   </button>
   <button
     color="primary"

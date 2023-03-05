@@ -15,8 +15,16 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FilterDialogComponent } from './filter-dialog/filter-dialog.component';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { HtmlSnackbarComponent } from './html-snackbar/html-snackbar.component';
+import { RouterTestingModule } from '@angular/router/testing';
+import { AppRoutingModule } from './app-routing/app-routing.module';
+
 @NgModule({
-  declarations: [AppComponent, FileDialogComponent, FilterDialogComponent, HtmlSnackbarComponent],
+  declarations: [
+    AppComponent,
+    FileDialogComponent,
+    FilterDialogComponent,
+    HtmlSnackbarComponent,
+  ],
   imports: [
     BrowserModule,
     BrowserAnimationsModule,
@@ -29,6 +37,8 @@ import { HtmlSnackbarComponent } from './html-snackbar/html-snackbar.component';
     MatSelectModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
+    RouterTestingModule,
+    AppRoutingModule,
   ],
   providers: [],
   bootstrap: [AppComponent],

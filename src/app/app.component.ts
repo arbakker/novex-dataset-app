@@ -1,4 +1,4 @@
-import { Component, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { isDevMode } from '@angular/core';
 
@@ -9,7 +9,7 @@ import {
   Iso19115Record,
   Iso19115RecordDiv,
 } from 'src/lib/models';
-import { getCSWRecords } from '../lib/csw';
+import { getCSWRecords, getRecordsUrl } from '../lib/csw';
 import { FileDialogComponent } from './file-dialog/file-dialog.component';
 import { FilterDialogComponent } from './filter-dialog/filter-dialog.component';
 import { saveAs } from 'file-saver';
@@ -19,12 +19,14 @@ import { HtmlSnackbarComponent } from './html-snackbar/html-snackbar.component';
 export function nameOf<T>(name: Extract<keyof T, string>): string {
   return name;
 }
+const DEFAULT_CQL_QUERY = "type='dataset' AND keyword='basisset novex'";
+
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
   title = 'novex-dataset-app';
   cswEndpoint = 'https://www.nationaalgeoregister.nl/geonetwork/srv/dut/csw';
   displayedColumns: string[] = ['mdId', 'title', 'resourceOwner', 'keywords'];
@@ -33,9 +35,10 @@ export class AppComponent {
   csvData: Dictionary<string>[] = [];
   cswLoading: boolean = true;
   mdIdColumnCsv: string = '';
-  cqlQuery: string = "type='dataset' AND keyword='basisset novex'";
+  // cqlQuery: string = '';
 
   filters: Filter[] = [];
+  subscription: any;
 
   constructor(public dialog: MatDialog, private _snackBar: MatSnackBar) {}
 
@@ -209,21 +212,21 @@ export class AppComponent {
     }
     return 0;
   }
-  ngOnInit() {
+
+  getRecords() {
     let promise: Promise<Iso19115Record[] | undefined>;
+    this.cswLoading = true;
+
     if (isDevMode()) {
-      promise = getCSWRecords(
-        this.cswEndpoint,
-        encodeURIComponent(this.cqlQuery),
-        -1,
-        './assets/mock.xml'
-      );
+      // for easily switching to local data in assets/mock.xml add following args: ,-1,"assets/mock.xml"
+      promise = getCSWRecords(this.cswEndpoint, this.cqlQuery);
     } else {
       promise = getCSWRecords(
         this.cswEndpoint,
         encodeURIComponent(this.cqlQuery)
       );
     }
+
     promise.then((records: Iso19115Record[] | undefined) => {
       if (records === undefined) {
         return;
@@ -233,18 +236,35 @@ export class AppComponent {
         .sort(this.sortRecords);
       this.dataView = this.dataSource;
       this.cswLoading = false;
-
-      let url = `${
-        this.cswEndpoint
-      }?request=GetRecords&Service=CSW&Version=2.0.2&typeNames=gmd:MD_Metadata&resultType=results&constraint=${encodeURIComponent(
-        this.cqlQuery
-      )}&constraintLanguage=CQL_TEXT&constraint_language_version=1.1.0&outputSchema=http://www.isotc211.org/2005/gmd&elementSetName=full`;
-
+      let url = getRecordsUrl(this.cswEndpoint, this.cqlQuery);
       this._snackBar.openFromComponent(HtmlSnackbarComponent, {
         data: {
-          html: `<p>Retrieved ${this.dataSource.length} metadata records from NGR with <a  href="${url}">query</a>:</p><pre><code>${this.cqlQuery}</code></pre>`,
+          html: `<p>Retrieved ${
+            this.dataSource.length
+          } metadata records from NGR with <a title="Bekijk deze CSW query in het NGR" target="_blank" href="${url}">query</a>:</p><pre><code>${decodeURIComponent(
+            this.cqlQuery
+          )}</code></pre>`,
         },
       });
+    });
+  }
+
+  public get cqlQuery(): string {
+    let hash: string = location.hash;
+    hash = hash.replace('#', '');
+    return hash;
+  }
+  public set cqlQuery(queryString: string) {
+    location.hash = encodeURIComponent(queryString);
+  }
+
+  ngOnInit() {
+    if (this.cqlQuery === '') {
+      this.cqlQuery = DEFAULT_CQL_QUERY;
+    }
+    this.getRecords();
+    window.addEventListener('hashchange', (e) => {
+      this.getRecords();
     });
   }
 }

@@ -2,7 +2,7 @@
 <div mat-dialog-content>
   <div>
     <button
-      title="Open CSV file (headers required)"
+      title="Open een CSV bestand (met headers)"
       *ngIf="!fileLoaded"
       type="button"
       color="primary"
@@ -20,10 +20,10 @@
       accept=".csv"
     />
     <mat-form-field appearance="fill" *ngIf="fileLoaded">
-      <mat-label>Metadata identifier column</mat-label>
+      <mat-label>Metadata identifier kolom</mat-label>
       <mat-select
         [(value)]="selectedColumn"
-        title="Select metadata identifier column"
+        title="Selecteer metadata-identificatie kolom"
       >
         <mat-option *ngFor="let column of columns" [value]="column">
           {{ column }}
