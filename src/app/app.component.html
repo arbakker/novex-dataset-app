@@ -72,7 +72,18 @@
           *matCellDef="let element"
           [ngClass]="getMatchedClass(element)"
         >
-          <span
+          <a
+            [href]="
+              '\#type=\'dataset\' AND organisationName=\'' +
+              element.resourceOwner +
+              '\''
+            "
+            [title]="
+              'Haal alle records van organisatie ' + element.resourceOwner
+            "
+            >{{ element.resourceOwner }}</a
+          >
+          <!-- <span
             *ngIf="
               element.resourceOwnerUrl === '';
               then thenBlock;
@@ -84,7 +95,7 @@
             ><a href="{{ element.resourceOwnerUrl }}" target="_blank">{{
               element.resourceOwner
             }}</a></ng-template
-          >
+          > -->
         </td>
       </ng-container>
 
