@@ -221,10 +221,7 @@ export class AppComponent implements OnInit {
       // for easily switching to local data in assets/mock.xml add following args: ,-1,"assets/mock.xml"
       promise = getCSWRecords(this.cswEndpoint, this.cqlQuery);
     } else {
-      promise = getCSWRecords(
-        this.cswEndpoint,
-        encodeURIComponent(this.cqlQuery)
-      );
+      promise = getCSWRecords(this.cswEndpoint, this.cqlQuery);
     }
 
     promise.then((records: Iso19115Record[] | undefined) => {
