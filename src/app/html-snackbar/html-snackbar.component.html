@@ -1,5 +1,7 @@
-<div>
-  <span *ngIf="error"><mat-icon>error</mat-icon></span>
-  <span [innerHTML]="html"></span>
+<div class="snackbar">
+  <div>
+    <span *ngIf="error" title="Error"><mat-icon>error</mat-icon></span>
+    <span [innerHTML]="html"></span>
+  </div>
+  <a class="dismiss" (click)="snackBar.dismiss()">OK</a>
 </div>
-<a class="dismiss" (click)="snackBar.dismiss()">OK</a>

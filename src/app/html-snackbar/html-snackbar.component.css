@@ -1,11 +1,11 @@
-a {
-  color: #0060df !important;
+::ng-deep .snackbar a {
+  color: #0060df;
 }
-a:visited {
+::ng-deep .snackbar a:visited {
   color: #ff4081;
 }
 
-a.dismiss {
+::ng-deep .snackbar a.dismiss {
   color: #ff4081;
   float: right;
   cursor: pointer;

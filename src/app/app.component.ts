@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { isDevMode } from '@angular/core';
 
@@ -15,7 +15,7 @@ import { FilterDialogComponent } from './filter-dialog/filter-dialog.component';
 import { saveAs } from 'file-saver';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { HtmlSnackbarComponent } from './html-snackbar/html-snackbar.component';
-import { HttpErrorResponse, HttpStatusCode } from '@angular/common/http';
+import { HttpErrorResponse } from '@angular/common/http';
 
 export function nameOf<T>(name: Extract<keyof T, string>): string {
   return name;
@@ -249,9 +249,9 @@ export class AppComponent implements OnInit {
         let url = getRecordsUrl(this.cswEndpoint, this.cqlQuery);
         this._snackBar.openFromComponent(HtmlSnackbarComponent, {
           data: {
-            html: `<p>Retrieved ${
+            html: `<p>${
               this.dataSource.length
-            } metadata records from NGR with <a title="Bekijk deze CSW query in het NGR" target="_blank" href="${url}">query</a>: </p><pre><code>${decodeURIComponent(
+            } Metadata records opgehaald uit het NGR met de <a title="Bekijk deze CSW query in het NGR" target="_blank" href="${url}">query</a>: </p><pre><code>${decodeURIComponent(
               this.cqlQuery
             )}</code></pre>`,
           },
@@ -263,7 +263,7 @@ export class AppComponent implements OnInit {
         this.dataView = this.dataSource;
         this._snackBar.openFromComponent(HtmlSnackbarComponent, {
           data: {
-            html: `<p>Ophalen records in NGR mislukt voor deze query: <a title="Bekijk deze CSW query in het NGR" target="_blank" href="${e.url}">query</a>. HTTP status code: ${e.status}</p>`,
+            html: `<p>Ophalen van records uit NGR mislukt voor deze <a title="Bekijk deze CSW query in het NGR" target="_blank" href="${e.url}">query</a>. HTTP status code: ${e.status}</p>`,
             error: true,
           },
         });
