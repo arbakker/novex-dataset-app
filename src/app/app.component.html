@@ -79,7 +79,7 @@
               '\''
             "
             [title]="
-              'Haal alle records van organisatie ' + element.resourceOwner
+              'Haal alle records op van organisatie ' + element.resourceOwner
             "
             >{{ element.resourceOwner }}</a
           >
@@ -108,15 +108,16 @@
           *matCellDef="let element"
           [ngClass]="getMatchedClass(element)"
         >
-          <a
-            *ngFor="let kw of element.keywords; last as isLast"
-            [href]="
-              '\#type=\'dataset\' AND keyword=\'' + kw.toLowerCase() + '\''
-            "
-            [title]="'Haal alle records op met keyword ' + kw"
-          >
-            {{ kw }}<span *ngIf="!isLast">, </span>
-          </a>
+          <span *ngFor="let kw of element.keywords; last as isLast">
+            <a
+              [href]="
+                '\#type=\'dataset\' AND keyword=\'' + kw.toLowerCase() + '\''
+              "
+              [title]="'Haal alle records op met keyword ' + kw"
+              >{{ kw }}</a
+            >
+            <span *ngIf="!isLast">, </span>
+          </span>
         </td>
       </ng-container>
       <ng-container matColumnDef="title">
@@ -153,6 +154,8 @@
           mat-cell
           *matCellDef="let element"
           [ngClass]="getMatchedClass(element)"
+          [title]="getTooltipCsvMatched(element.csvMatched)"
+          style="cursor: pointer"
         >
           {{ element.csvMatched }}
         </td>

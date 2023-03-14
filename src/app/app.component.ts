@@ -15,6 +15,7 @@ import { FilterDialogComponent } from './filter-dialog/filter-dialog.component';
 import { saveAs } from 'file-saver';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { HtmlSnackbarComponent } from './html-snackbar/html-snackbar.component';
+import { HttpErrorResponse, HttpStatusCode } from '@angular/common/http';
 
 export function nameOf<T>(name: Extract<keyof T, string>): string {
   return name;
@@ -176,6 +177,19 @@ export class AppComponent implements OnInit {
     return csvMatched;
   }
 
+  getTooltipCsvMatched(csvMatchedVal: csvMatched) {
+    switch (csvMatchedVal) {
+      case csvMatched.True:
+        return 'Record in NGR en in CSV bestand';
+      case csvMatched.False:
+        return 'Record in NGR maar niet in CSV bestand';
+      case csvMatched.RecordNotInCatalog:
+        return 'Record in CSV bestand maar niet in NGR';
+      default:
+        return '';
+    }
+  }
+
   getMatchedClass(element: Iso19115RecordDiv) {
     if (this.csvData.length > 0) {
       switch (element.csvMatched) {
@@ -214,7 +228,7 @@ export class AppComponent implements OnInit {
   }
 
   getRecords() {
-    let promise: Promise<Iso19115Record[] | undefined>;
+    let promise: Promise<Iso19115Record[] | HttpErrorResponse>;
     this.cswLoading = true;
 
     if (isDevMode()) {
@@ -224,26 +238,36 @@ export class AppComponent implements OnInit {
       promise = getCSWRecords(this.cswEndpoint, this.cqlQuery);
     }
 
-    promise.then((records: Iso19115Record[] | undefined) => {
-      if (records === undefined) {
-        return;
-      }
-      this.dataSource = records
-        .map((x) => x as Iso19115RecordDiv)
-        .sort(this.sortRecords);
-      this.dataView = this.dataSource;
-      this.cswLoading = false;
-      let url = getRecordsUrl(this.cswEndpoint, this.cqlQuery);
-      this._snackBar.openFromComponent(HtmlSnackbarComponent, {
-        data: {
-          html: `<p>Retrieved ${
-            this.dataSource.length
-          } metadata records from NGR with <a title="Bekijk deze CSW query in het NGR" target="_blank" href="${url}">query</a>:</p><pre><code>${decodeURIComponent(
-            this.cqlQuery
-          )}</code></pre>`,
-        },
+    promise
+      .then((records: Iso19115Record[] | HttpErrorResponse) => {
+        let recordPromise: Iso19115Record[] = records as Iso19115Record[];
+        this.dataSource = recordPromise
+          .map((x) => x as Iso19115RecordDiv)
+          .sort(this.sortRecords);
+        this.dataView = this.dataSource;
+        this.cswLoading = false;
+        let url = getRecordsUrl(this.cswEndpoint, this.cqlQuery);
+        this._snackBar.openFromComponent(HtmlSnackbarComponent, {
+          data: {
+            html: `<p>Retrieved ${
+              this.dataSource.length
+            } metadata records from NGR with <a title="Bekijk deze CSW query in het NGR" target="_blank" href="${url}">query</a>: </p><pre><code>${decodeURIComponent(
+              this.cqlQuery
+            )}</code></pre>`,
+          },
+        });
+      })
+      .catch((e) => {
+        this.cswLoading = false;
+        this.dataSource = [];
+        this.dataView = this.dataSource;
+        this._snackBar.openFromComponent(HtmlSnackbarComponent, {
+          data: {
+            html: `<p>Ophalen records in NGR mislukt voor deze query: <a title="Bekijk deze CSW query in het NGR" target="_blank" href="${e.url}">query</a>. HTTP status code: ${e.status}</p>`,
+            error: true,
+          },
+        });
       });
-    });
   }
 
   public get cqlQuery(): string {

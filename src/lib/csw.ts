@@ -1,3 +1,4 @@
+import { HttpErrorResponse, HttpStatusCode } from '@angular/common/http';
 import { Iso19115Record } from './models';
 
 export var getRecordsUrl = (
@@ -18,8 +19,16 @@ var getCswPromises = async (
     return [fetch(debugRecordsUrl)];
   }
   let urlHits = `${getRecordsUrl(cswEndpoint, cqlQuery, 'hits')}`;
-  let res = await fetch(urlHits);
-  if (!res.ok) return;
+  let res: Response = await fetch(urlHits);
+
+  if (!res.ok) {
+    let resBody = await res.text();
+    throw new HttpErrorResponse({
+      url: res.url,
+      status: res.status,
+      error: resBody,
+    });
+  }
   let data = await res.text();
   let parser = new DOMParser();
   let xmlDoc = parser.parseFromString(data, 'text/xml');
@@ -55,18 +64,15 @@ export var getCSWRecords = async (
   cqlQuery: string,
   maxRecords = -1,
   debugRecordsUrl = ''
-): Promise<Iso19115Record[] | undefined> => {
+): Promise<Iso19115Record[] | HttpErrorResponse> => {
   let records: Iso19115Record[] = [];
-  let promises: Promise<Promise<Response>[] | undefined> = getCswPromises(
+  let promises: Promise<Promise<Response>[]> = getCswPromises(
     cswEndpoint,
     cqlQuery,
     maxRecords,
     debugRecordsUrl
   );
-  const responses: Promise<Response>[] | undefined = await promises;
-  if (responses === undefined) {
-    return;
-  }
+  const responses: Promise<Response>[] | HttpErrorResponse = await promises;
 
   const responseBodies = await Promise.all(responses!).then((bodies) => {
     return Promise.all(
@@ -92,7 +98,7 @@ export var getCSWRecords = async (
       let abstract: string = getAbstract(recordDocDoc);
 
       let kws: string[] = getElementsByText(
-        ".//gmd:descriptiveKeywords[not(.//gmd:thesaurusName) or .//gmd:thesaurusName/gmd:CI_Citation[.//gmd:title/@gco:nilReason = 'missing'] ]/gmd:MD_Keywords/gmd:keyword/gco:CharacterString",
+        './/gmd:descriptiveKeywords/gmd:MD_Keywords/gmd:keyword/gco:CharacterString',
         recordDocDoc
       );
       let organisationUrl = '';
@@ -147,7 +153,7 @@ function getElementsByText(xpath: string, xmlDoc: Document): string[] {
   );
   var node;
   while ((node = xpathResult.iterateNext()) != null) {
-    if (node.textContent !== null) {
+    if (node.textContent !== null && node.textContent.trim() !== '') {
       results.push(node.textContent);
     }
   }

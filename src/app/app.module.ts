@@ -25,6 +25,7 @@ import { AppRoutingModule } from './app-routing/app-routing.module';
     FilterDialogComponent,
     HtmlSnackbarComponent,
   ],
+  entryComponents: [HtmlSnackbarComponent],
   imports: [
     BrowserModule,
     BrowserAnimationsModule,
