@@ -273,7 +273,7 @@ export class AppComponent implements OnInit {
   public get cqlQuery(): string {
     let hash: string = location.hash;
     hash = hash.replace('#', '');
-    return hash;
+    return encodeURIComponent(hash).replaceAll('%25', '%'); // prevent encoding percentages %25 again
   }
   public set cqlQuery(queryString: string) {
     location.hash = encodeURIComponent(queryString);
