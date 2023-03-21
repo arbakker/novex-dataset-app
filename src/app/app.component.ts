@@ -30,7 +30,13 @@ const DEFAULT_CQL_QUERY = "type='dataset' AND keyword='basisset novex'";
 export class AppComponent implements OnInit {
   title = 'novex-dataset-app';
   cswEndpoint = 'https://www.nationaalgeoregister.nl/geonetwork/srv/dut/csw';
-  displayedColumns: string[] = ['mdId', 'title', 'resourceOwner', 'keywords'];
+  displayedColumns: string[] = [
+    'mdId',
+    'title',
+    'resourceOwner',
+    'keywords',
+    'protocols',
+  ];
   dataSource: Iso19115RecordDiv[] = [];
   dataView: Iso19115RecordDiv[] = [];
   csvData: Dictionary<string>[] = [];
@@ -115,14 +121,18 @@ export class AppComponent implements OnInit {
       }
       return JSON.stringify(value);
     }; // specify how you want to handle null values here
+    let blackList = ['abstract', 'resourceOwnerUrl', 'onlineResources'];
 
-    const header = Object.getOwnPropertyNames(data[0]);
+    const header = Object.getOwnPropertyNames(data[0]).filter(
+      (x) => !blackList.includes(x)
+    );
     let csv = data.map((record) =>
       header
         .map((fieldName) => {
           const myproperty = fieldName as keyof Iso19115RecordDiv;
           return replacer(record[myproperty]);
         })
+        .filter((x) => x !== null)
         .join(',')
     );
     csv.unshift(header.map((x) => `"${x}"`).join(','));

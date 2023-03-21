@@ -12,7 +12,9 @@ export class Iso19115Record {
     public abstract?: string,
     public keywords?: string[],
     public resourceOwner?: string,
-    public resourceOwnerUrl?: string
+    public resourceOwnerUrl?: string,
+    public protocols?: string[],
+    public onlineResources?: string[]
   ) {}
 }
 
@@ -29,9 +31,20 @@ export class Iso19115RecordDiv extends Iso19115Record {
     public override keywords?: string[],
     public override resourceOwner?: string,
     public override resourceOwnerUrl?: string,
+    public override protocols?: string[],
+    public override onlineResources?: string[],
     public csvMatched?: csvMatched
   ) {
-    super(title, mdId, abstract, keywords, resourceOwner, resourceOwnerUrl);
+    super(
+      title,
+      mdId,
+      abstract,
+      keywords,
+      resourceOwner,
+      resourceOwnerUrl,
+      protocols,
+      onlineResources
+    );
   }
 }
 

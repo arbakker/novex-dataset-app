@@ -101,6 +101,20 @@ export var getCSWRecords = async (
         './/gmd:descriptiveKeywords/gmd:MD_Keywords/gmd:keyword/gco:CharacterString',
         recordDocDoc
       );
+
+      let protocolsChar: string[] = getElementsByText(
+        './/gmd:onLine/gmd:CI_OnlineResource/gmd:protocol/gco:CharacterString',
+        recordDocDoc
+      );
+      let protocolsAnch: string[] = getElementsByText(
+        './/gmd:onLine/gmd:CI_OnlineResource/gmd:protocol/gmx:Anchor',
+        recordDocDoc
+      );
+      let protocols: string[] = [...protocolsAnch, ...protocolsChar];
+      let onlineResources: string[] = getElementsByText(
+        './/gmd:onLine/gmd:CI_OnlineResource/gmd:linkage/gmd:URL',
+        recordDocDoc
+      );
       let organisationUrl = '';
       let organisationName = getStringValXpath(
         recordDocDoc,
@@ -123,7 +137,9 @@ export var getCSWRecords = async (
         abstract,
         kws,
         organisationName,
-        organisationUrl
+        organisationUrl,
+        protocols,
+        onlineResources
       );
       records.push(record);
     }
