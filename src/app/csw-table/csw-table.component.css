@@ -1,0 +1,31 @@
+ .main{
+  height: calc(100vh - 64px);
+  overflow: auto; 
+  width: 100%;
+ }
+ 
+ .loading {
+  justify-content: center;
+  vertical-align: middle;
+  align-items: center;
+}
+
+
+
+.inCsv {
+  background-color: #e6ffec;
+}
+
+.notInCsv {
+  background-color: #ffebe9;
+}
+
+.notInNGR {
+  background-color: #fffce9;
+}
+
+.filterActive {
+  background-color: #ff4081;
+  color: white;
+  border-radius: 4px;
+}
