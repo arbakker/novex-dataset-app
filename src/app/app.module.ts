@@ -16,7 +16,14 @@ import { FilterDialogComponent } from './filter-dialog/filter-dialog.component';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { HtmlSnackbarComponent } from './html-snackbar/html-snackbar.component';
 import { RouterTestingModule } from '@angular/router/testing';
+import { CswTableComponent } from './csw-table/csw-table.component';
+import { HelpPageComponent } from './help-page/help-page.component';
+import { RouterModule } from '@angular/router';
 import { AppRoutingModule } from './app-routing/app-routing.module';
+import {MatToolbarModule} from '@angular/material/toolbar'; 
+import { SecurityContext } from '@angular/core';
+import { MarkdownModule } from 'ngx-markdown'; 
+import { HttpClientModule, HttpClient } from '@angular/common/http'; 
 
 @NgModule({
   declarations: [
@@ -24,6 +31,8 @@ import { AppRoutingModule } from './app-routing/app-routing.module';
     FileDialogComponent,
     FilterDialogComponent,
     HtmlSnackbarComponent,
+    CswTableComponent,
+    HelpPageComponent,
   ],
   entryComponents: [HtmlSnackbarComponent],
   imports: [
@@ -39,8 +48,12 @@ import { AppRoutingModule } from './app-routing/app-routing.module';
     MatProgressSpinnerModule,
     MatSnackBarModule,
     RouterTestingModule,
+    RouterModule,
     AppRoutingModule,
-  ],
+    HttpClientModule,
+    MatToolbarModule,
+      MarkdownModule.forRoot({ loader: HttpClient, sanitize: SecurityContext.NONE }) 
+    ],
   providers: [],
   bootstrap: [AppComponent],
 })
