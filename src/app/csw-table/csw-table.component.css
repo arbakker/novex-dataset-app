@@ -10,7 +10,9 @@
   align-items: center;
 }
 
-
+#table{
+  width:100vw;
+}
 
 .inCsv {
   background-color: #e6ffec;
